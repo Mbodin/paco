@@ -1,0 +1,19 @@
+{
+	"name": "Paco",
+	"version": "4.0.0",
+	"description": "A Coq library for parametric coinduction",
+	"esy": {
+		"buildEnv": {
+			"COQBIN": "#{@opam/coq.bin}/",
+			"COQLIB": "#{@opam/coq.lib}/coq/",
+			"COQMAKEFILEOPTIONS": "-install user DESTDIR = '#{self.install}' COQMF_WINDRIVE = '#{@opam/coq.lib}/coq'"
+		},
+		"build": "make -C src",
+		"install": "make -C src install",
+		"buildsInSource": true
+	},
+	"dependencies": {
+		"@opam/coq": ">= 8.5"
+	}
+}
+

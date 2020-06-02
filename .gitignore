@@ -5,9 +5,15 @@ _CoqProject
 
 *.aux
 *.vo
+*.vos
+*.vok
 *.vio
 *.v.d
 *.glob
 *.pyc
 \#*\#
 *~
+
+_esy/
+node_modules/
+
