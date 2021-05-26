@@ -1,6 +1,6 @@
 {
 	"name": "Paco",
-	"version": "4.0.0",
+	"version": "4.1.1",
 	"description": "A Coq library for parametric coinduction",
 	"esy": {
 		"buildEnv": {
@@ -13,7 +13,7 @@
 		"buildsInSource": true
 	},
 	"dependencies": {
-		"@opam/coq": ">=8.9 <=8.13"
+		"@opam/coq": ">=8.9 <=8.13.2"
 	}
 }
 
