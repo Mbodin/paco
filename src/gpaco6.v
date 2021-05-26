@@ -51,6 +51,13 @@ Proof.
   intros. apply PR0.
 Qed.
 
+Lemma rclo6_clo_base clo r:
+  clo r <6= rclo6 clo r.
+Proof.
+  intros. eapply rclo6_clo', PR.
+  intros. apply rclo6_base, PR0.
+Qed.
+
 Lemma rclo6_rclo clo r:
   rclo6 clo (rclo6 clo r) <6= rclo6 clo r.
 Proof.
@@ -137,8 +144,7 @@ Qed.
 Lemma gpaco6_clo clo r rg:
   clo r <6= gpaco6 clo r rg.
 Proof.
-  intros. apply gpaco6_rclo. eapply rclo6_clo', PR.
-  apply rclo6_base.
+  intros. apply gpaco6_rclo. eapply rclo6_clo_base, PR.
 Qed.
 
 Lemma gpaco6_gen_rclo clo r rg:
@@ -401,7 +407,7 @@ Proof.
       * eapply COM. eapply COM. apply IN. apply H.
       * intros. eapply gpaco6_gupaco. apply gf_mon.
         eapply gupaco6_mon_gen; intros; [apply PR|apply gf_mon|apply PR0| |apply PR0].
-        eapply rclo6_clo'. apply rclo6_base. apply PR0.
+        apply rclo6_clo_base, PR0.
 Qed.
 
 Lemma compat6_wcompat clo
@@ -641,6 +647,213 @@ Qed.
 
 End Companion.
 
+Section Respectful.
+
+Variable gf: rel -> rel.
+Hypothesis gf_mon: monotone6 gf.
+
+Structure wrespectful6 (clo: rel -> rel) : Prop :=
+  wrespect6_intro {
+      wrespect6_mon: monotone6 clo;
+      wrespect6_respect :
+        forall l r
+               (LE: l <6= r)
+               (GF: l <6= gf r),
+        clo l <6= gf (rclo6 clo r);
+    }.
+
+Structure prespectful6 (clo: rel -> rel) : Prop :=
+  prespect6_intro {
+      prespect6_mon: monotone6 clo;
+      prespect6_respect :
+        forall l r
+               (LE: l <6= r)
+               (GF: l <6= gf r),
+        clo l <6= paco6 gf (r \6/ clo r);
+    }.
+
+Structure grespectful6 (clo: rel -> rel) : Prop :=
+  grespect6_intro {
+      grespect6_mon: monotone6 clo;
+      grespect6_respect :
+        forall l r
+               (LE: l <6= r)
+               (GF: l <6= gf r),
+        clo l <6= rclo6 (cpn6 gf) (gf (rclo6 (clo \7/ gupaco6 gf (cpn6 gf)) r));
+    }.
+
+Definition gf'6 := id /7\ gf.
+
+Definition compatible'6 := compatible6 gf'6.
+
+Lemma wrespect6_compatible'
+      clo (RES: wrespectful6 clo):
+  compatible'6 (rclo6 clo).
+Proof.
+  intros. econstructor. apply rclo6_mon.
+  intros. destruct RES. split.
+  { eapply rclo6_mon. apply PR. intros. apply PR0. }
+  induction PR; intros.
+  - eapply gf_mon. apply IN.
+    intros. apply rclo6_base, PR.
+  - eapply gf_mon.
+    + eapply wrespect6_respect0; [|apply H|apply IN].
+      intros. eapply rclo6_mon; intros; [apply LE, PR|apply PR0].
+    + intros. apply rclo6_rclo, PR.
+Qed.
+
+Lemma prespect6_compatible'
+      clo (RES: prespectful6 clo):
+  compatible'6 (fun r => upaco6 gf (r \6/ clo r)).
+Proof.
+  econstructor.
+  { red; intros. eapply upaco6_mon. apply IN.
+    intros. destruct PR.
+    - left. apply LE, H.
+    - right. eapply RES. apply H. intros. apply LE, PR. }
+
+  intros r.
+  assert (LEM: (gf'6 r \6/ clo (gf'6 r)) <6= (r \6/ clo r)).
+  { intros. destruct PR.
+    - left. apply H.
+    - right. eapply RES. apply H. intros. apply PR.
+  }
+
+  intros. destruct PR.
+  - split.
+    + left. eapply paco6_mon. apply H. apply LEM.
+    + apply paco6_unfold; [apply gf_mon|].
+      eapply paco6_mon. apply H. apply LEM.
+  - split.
+    + right. apply LEM. apply H.
+    + destruct H.
+      * eapply gf_mon. apply H. intros. right. left. apply PR.
+      * apply paco6_unfold; [apply gf_mon|].
+        eapply RES, H; intros; apply PR.
+Qed.
+
+Lemma grespect6_compatible'
+      clo (RES: grespectful6 clo):
+  compatible'6 (rclo6 (clo \7/ cpn6 gf)).
+Proof.
+  apply wrespect6_compatible'.
+  econstructor.
+  { red; intros. destruct IN.
+    - left. eapply RES; [apply H|]. apply LE.
+    - right. eapply cpn6_mon; [apply H|]. apply LE. }
+  intros. destruct PR.
+  - eapply RES.(grespect6_respect) in H; [|apply LE|apply GF].
+    apply (@compat6_compat gf (rclo6 (cpn6 gf))) in H.
+    2: { apply rclo6_compat; [apply gf_mon|]. apply cpn6_compat. apply gf_mon. }
+    eapply gf_mon; [apply H|].
+    intros. apply rclo6_clo. right.
+    exists (rclo6 (cpn6 gf)).
+    { apply rclo6_compat; [apply gf_mon|]. apply cpn6_compat. apply gf_mon. }
+    eapply rclo6_mon; [eapply PR|].
+    intros. eapply rclo6_mon_gen; [eapply PR0|..].
+    + intros. destruct PR1.
+      * left. apply H0.
+      * right. apply cpn6_gupaco; [apply gf_mon|apply H0].
+    + intros. apply PR1.
+  - eapply gf_mon.
+    + apply (@compat6_compat gf (rclo6 (cpn6 gf))).
+      { apply rclo6_compat; [apply gf_mon|]. apply cpn6_compat. apply gf_mon. }
+      eapply rclo6_clo_base. eapply cpn6_mon; [apply H|apply GF].
+    + intros. eapply rclo6_mon_gen; [eapply PR|..].
+      * intros. right. apply PR0.
+      * intros. apply PR0.
+Qed.
+
+Lemma compat6_compatible'
+      clo (COM: compatible6 gf clo):
+  compatible'6 clo.
+Proof.
+  destruct COM. econstructor; [apply compat6_mon0|].
+  intros. split.
+  - eapply compat6_mon0; intros; [apply PR| apply PR0].
+  - apply compat6_compat0.
+    eapply compat6_mon0; intros; [apply PR| apply PR0].
+Qed.
+
+Lemma compatible'6_companion
+      clo (RES: compatible'6 clo):
+  clo <7= cpn6 gf.
+Proof.
+  assert (MON: monotone6 gf'6).
+  { econstructor. apply LE, IN.
+    eapply gf_mon, LE. apply IN.
+  }
+  assert (CPN: clo <7= cpn6 gf'6).
+  { intros. econstructor. apply RES. apply PR.
+  }
+  intros. apply CPN in PR.
+  econstructor; [|apply PR].
+  econstructor; [apply cpn6_mon|]; intros.
+  assert (PR1: cpn6 gf'6 (gf r) <6= cpn6 gf'6 (gf'6 (cpn6 gf r))).
+  { intros. eapply cpn6_mon. apply PR1.
+    intros. assert (TMP: gf (cpn6 gf r) <6= (cpn6 gf r /6\ gf (cpn6 gf r))).
+    { split; [apply cpn6_step; [apply gf_mon|]|]; assumption. }
+    apply TMP.
+    eapply gf_mon. apply PR2. intros. apply cpn6_base; assumption.
+  }
+  apply PR1 in PR0. clear PR1. 
+  eapply compat6_compat with (gf:=gf'6) in PR0; [|apply cpn6_compat, MON].
+  eapply gf_mon; [apply PR0|].
+  intros. eapply cpn6_cpn; [apply MON|].
+  eapply cpn6_mon; [apply PR1|].
+  intros. econstructor; [|apply PR2].
+  apply compat6_compatible', cpn6_compat, gf_mon.
+Qed.
+
+Lemma wrespect6_companion
+      clo (RES: wrespectful6 clo):
+  clo <7= cpn6 gf.
+Proof.
+  intros. eapply wrespect6_compatible' in RES.
+  eapply (@compatible'6_companion (rclo6 clo)) in RES; [apply RES|].
+  eapply rclo6_clo_base, PR.
+Qed.
+
+Lemma prespect6_companion
+      clo (RES: prespectful6 clo):
+  clo <7= cpn6 gf.
+Proof.
+  intros. eapply compatible'6_companion. apply prespect6_compatible'. apply RES.
+  right. right. apply PR.
+Qed.
+
+Lemma grespect6_companion
+      clo (RES: grespectful6 clo):
+  clo <7= cpn6 gf.
+Proof.
+  intros. eapply grespect6_compatible' in RES.
+  eapply (@compatible'6_companion (rclo6 (clo \7/ cpn6 gf))); [apply RES|].
+  apply rclo6_clo_base. left. apply PR.
+Qed.
+
+Lemma wrespect6_uclo
+      clo (RES: wrespectful6 clo):
+  clo <7= gupaco6 gf (cpn6 gf).
+Proof.
+  intros. eapply gpaco6_clo, wrespect6_companion, PR. apply RES.
+Qed.
+
+Lemma prespect6_uclo
+      clo (RES: prespectful6 clo):
+  clo <7= gupaco6 gf (cpn6 gf).
+Proof.
+  intros. eapply gpaco6_clo, prespect6_companion, PR. apply RES.
+Qed.
+
+Lemma grespect6_uclo
+      clo (RES: grespectful6 clo):
+  clo <7= gupaco6 gf (cpn6 gf).
+Proof.
+  intros. eapply gpaco6_clo, grespect6_companion, PR. apply RES.
+Qed.
+
+End Respectful.
+
 End GeneralizedPaco6.
 
 Hint Resolve gpaco6_def_mon : paco.
@@ -650,3 +863,5 @@ Hint Resolve gpaco6_step : paco.
 Hint Resolve gpaco6_final : paco.
 Hint Resolve rclo6_base : paco.
 Hint Constructors gpaco6 : paco.
+Hint Resolve wrespect6_uclo : paco.
+Hint Resolve prespect6_uclo : paco.

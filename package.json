@@ -13,7 +13,7 @@
 		"buildsInSource": true
 	},
 	"dependencies": {
-		"@opam/coq": ">= 8.5"
+		"@opam/coq": ">=8.9 <=8.13"
 	}
 }
 

@@ -49,6 +49,13 @@ Proof.
   intros. apply PR0.
 Qed.
 
+Lemma rclo4_clo_base clo r:
+  clo r <4= rclo4 clo r.
+Proof.
+  intros. eapply rclo4_clo', PR.
+  intros. apply rclo4_base, PR0.
+Qed.
+
 Lemma rclo4_rclo clo r:
   rclo4 clo (rclo4 clo r) <4= rclo4 clo r.
 Proof.
@@ -135,8 +142,7 @@ Qed.
 Lemma gpaco4_clo clo r rg:
   clo r <4= gpaco4 clo r rg.
 Proof.
-  intros. apply gpaco4_rclo. eapply rclo4_clo', PR.
-  apply rclo4_base.
+  intros. apply gpaco4_rclo. eapply rclo4_clo_base, PR.
 Qed.
 
 Lemma gpaco4_gen_rclo clo r rg:
@@ -399,7 +405,7 @@ Proof.
       * eapply COM. eapply COM. apply IN. apply H.
       * intros. eapply gpaco4_gupaco. apply gf_mon.
         eapply gupaco4_mon_gen; intros; [apply PR|apply gf_mon|apply PR0| |apply PR0].
-        eapply rclo4_clo'. apply rclo4_base. apply PR0.
+        apply rclo4_clo_base, PR0.
 Qed.
 
 Lemma compat4_wcompat clo
@@ -639,6 +645,213 @@ Qed.
 
 End Companion.
 
+Section Respectful.
+
+Variable gf: rel -> rel.
+Hypothesis gf_mon: monotone4 gf.
+
+Structure wrespectful4 (clo: rel -> rel) : Prop :=
+  wrespect4_intro {
+      wrespect4_mon: monotone4 clo;
+      wrespect4_respect :
+        forall l r
+               (LE: l <4= r)
+               (GF: l <4= gf r),
+        clo l <4= gf (rclo4 clo r);
+    }.
+
+Structure prespectful4 (clo: rel -> rel) : Prop :=
+  prespect4_intro {
+      prespect4_mon: monotone4 clo;
+      prespect4_respect :
+        forall l r
+               (LE: l <4= r)
+               (GF: l <4= gf r),
+        clo l <4= paco4 gf (r \4/ clo r);
+    }.
+
+Structure grespectful4 (clo: rel -> rel) : Prop :=
+  grespect4_intro {
+      grespect4_mon: monotone4 clo;
+      grespect4_respect :
+        forall l r
+               (LE: l <4= r)
+               (GF: l <4= gf r),
+        clo l <4= rclo4 (cpn4 gf) (gf (rclo4 (clo \5/ gupaco4 gf (cpn4 gf)) r));
+    }.
+
+Definition gf'4 := id /5\ gf.
+
+Definition compatible'4 := compatible4 gf'4.
+
+Lemma wrespect4_compatible'
+      clo (RES: wrespectful4 clo):
+  compatible'4 (rclo4 clo).
+Proof.
+  intros. econstructor. apply rclo4_mon.
+  intros. destruct RES. split.
+  { eapply rclo4_mon. apply PR. intros. apply PR0. }
+  induction PR; intros.
+  - eapply gf_mon. apply IN.
+    intros. apply rclo4_base, PR.
+  - eapply gf_mon.
+    + eapply wrespect4_respect0; [|apply H|apply IN].
+      intros. eapply rclo4_mon; intros; [apply LE, PR|apply PR0].
+    + intros. apply rclo4_rclo, PR.
+Qed.
+
+Lemma prespect4_compatible'
+      clo (RES: prespectful4 clo):
+  compatible'4 (fun r => upaco4 gf (r \4/ clo r)).
+Proof.
+  econstructor.
+  { red; intros. eapply upaco4_mon. apply IN.
+    intros. destruct PR.
+    - left. apply LE, H.
+    - right. eapply RES. apply H. intros. apply LE, PR. }
+
+  intros r.
+  assert (LEM: (gf'4 r \4/ clo (gf'4 r)) <4= (r \4/ clo r)).
+  { intros. destruct PR.
+    - left. apply H.
+    - right. eapply RES. apply H. intros. apply PR.
+  }
+
+  intros. destruct PR.
+  - split.
+    + left. eapply paco4_mon. apply H. apply LEM.
+    + apply paco4_unfold; [apply gf_mon|].
+      eapply paco4_mon. apply H. apply LEM.
+  - split.
+    + right. apply LEM. apply H.
+    + destruct H.
+      * eapply gf_mon. apply H. intros. right. left. apply PR.
+      * apply paco4_unfold; [apply gf_mon|].
+        eapply RES, H; intros; apply PR.
+Qed.
+
+Lemma grespect4_compatible'
+      clo (RES: grespectful4 clo):
+  compatible'4 (rclo4 (clo \5/ cpn4 gf)).
+Proof.
+  apply wrespect4_compatible'.
+  econstructor.
+  { red; intros. destruct IN.
+    - left. eapply RES; [apply H|]. apply LE.
+    - right. eapply cpn4_mon; [apply H|]. apply LE. }
+  intros. destruct PR.
+  - eapply RES.(grespect4_respect) in H; [|apply LE|apply GF].
+    apply (@compat4_compat gf (rclo4 (cpn4 gf))) in H.
+    2: { apply rclo4_compat; [apply gf_mon|]. apply cpn4_compat. apply gf_mon. }
+    eapply gf_mon; [apply H|].
+    intros. apply rclo4_clo. right.
+    exists (rclo4 (cpn4 gf)).
+    { apply rclo4_compat; [apply gf_mon|]. apply cpn4_compat. apply gf_mon. }
+    eapply rclo4_mon; [eapply PR|].
+    intros. eapply rclo4_mon_gen; [eapply PR0|..].
+    + intros. destruct PR1.
+      * left. apply H0.
+      * right. apply cpn4_gupaco; [apply gf_mon|apply H0].
+    + intros. apply PR1.
+  - eapply gf_mon.
+    + apply (@compat4_compat gf (rclo4 (cpn4 gf))).
+      { apply rclo4_compat; [apply gf_mon|]. apply cpn4_compat. apply gf_mon. }
+      eapply rclo4_clo_base. eapply cpn4_mon; [apply H|apply GF].
+    + intros. eapply rclo4_mon_gen; [eapply PR|..].
+      * intros. right. apply PR0.
+      * intros. apply PR0.
+Qed.
+
+Lemma compat4_compatible'
+      clo (COM: compatible4 gf clo):
+  compatible'4 clo.
+Proof.
+  destruct COM. econstructor; [apply compat4_mon0|].
+  intros. split.
+  - eapply compat4_mon0; intros; [apply PR| apply PR0].
+  - apply compat4_compat0.
+    eapply compat4_mon0; intros; [apply PR| apply PR0].
+Qed.
+
+Lemma compatible'4_companion
+      clo (RES: compatible'4 clo):
+  clo <5= cpn4 gf.
+Proof.
+  assert (MON: monotone4 gf'4).
+  { econstructor. apply LE, IN.
+    eapply gf_mon, LE. apply IN.
+  }
+  assert (CPN: clo <5= cpn4 gf'4).
+  { intros. econstructor. apply RES. apply PR.
+  }
+  intros. apply CPN in PR.
+  econstructor; [|apply PR].
+  econstructor; [apply cpn4_mon|]; intros.
+  assert (PR1: cpn4 gf'4 (gf r) <4= cpn4 gf'4 (gf'4 (cpn4 gf r))).
+  { intros. eapply cpn4_mon. apply PR1.
+    intros. assert (TMP: gf (cpn4 gf r) <4= (cpn4 gf r /4\ gf (cpn4 gf r))).
+    { split; [apply cpn4_step; [apply gf_mon|]|]; assumption. }
+    apply TMP.
+    eapply gf_mon. apply PR2. intros. apply cpn4_base; assumption.
+  }
+  apply PR1 in PR0. clear PR1. 
+  eapply compat4_compat with (gf:=gf'4) in PR0; [|apply cpn4_compat, MON].
+  eapply gf_mon; [apply PR0|].
+  intros. eapply cpn4_cpn; [apply MON|].
+  eapply cpn4_mon; [apply PR1|].
+  intros. econstructor; [|apply PR2].
+  apply compat4_compatible', cpn4_compat, gf_mon.
+Qed.
+
+Lemma wrespect4_companion
+      clo (RES: wrespectful4 clo):
+  clo <5= cpn4 gf.
+Proof.
+  intros. eapply wrespect4_compatible' in RES.
+  eapply (@compatible'4_companion (rclo4 clo)) in RES; [apply RES|].
+  eapply rclo4_clo_base, PR.
+Qed.
+
+Lemma prespect4_companion
+      clo (RES: prespectful4 clo):
+  clo <5= cpn4 gf.
+Proof.
+  intros. eapply compatible'4_companion. apply prespect4_compatible'. apply RES.
+  right. right. apply PR.
+Qed.
+
+Lemma grespect4_companion
+      clo (RES: grespectful4 clo):
+  clo <5= cpn4 gf.
+Proof.
+  intros. eapply grespect4_compatible' in RES.
+  eapply (@compatible'4_companion (rclo4 (clo \5/ cpn4 gf))); [apply RES|].
+  apply rclo4_clo_base. left. apply PR.
+Qed.
+
+Lemma wrespect4_uclo
+      clo (RES: wrespectful4 clo):
+  clo <5= gupaco4 gf (cpn4 gf).
+Proof.
+  intros. eapply gpaco4_clo, wrespect4_companion, PR. apply RES.
+Qed.
+
+Lemma prespect4_uclo
+      clo (RES: prespectful4 clo):
+  clo <5= gupaco4 gf (cpn4 gf).
+Proof.
+  intros. eapply gpaco4_clo, prespect4_companion, PR. apply RES.
+Qed.
+
+Lemma grespect4_uclo
+      clo (RES: grespectful4 clo):
+  clo <5= gupaco4 gf (cpn4 gf).
+Proof.
+  intros. eapply gpaco4_clo, grespect4_companion, PR. apply RES.
+Qed.
+
+End Respectful.
+
 End GeneralizedPaco4.
 
 Hint Resolve gpaco4_def_mon : paco.
@@ -648,3 +861,5 @@ Hint Resolve gpaco4_step : paco.
 Hint Resolve gpaco4_final : paco.
 Hint Resolve rclo4_base : paco.
 Hint Constructors gpaco4 : paco.
+Hint Resolve wrespect4_uclo : paco.
+Hint Resolve prespect4_uclo : paco.

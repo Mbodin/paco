@@ -48,6 +48,13 @@ Proof.
   intros. apply PR0.
 Qed.
 
+Lemma rclo3_clo_base clo r:
+  clo r <3= rclo3 clo r.
+Proof.
+  intros. eapply rclo3_clo', PR.
+  intros. apply rclo3_base, PR0.
+Qed.
+
 Lemma rclo3_rclo clo r:
   rclo3 clo (rclo3 clo r) <3= rclo3 clo r.
 Proof.
@@ -134,8 +141,7 @@ Qed.
 Lemma gpaco3_clo clo r rg:
   clo r <3= gpaco3 clo r rg.
 Proof.
-  intros. apply gpaco3_rclo. eapply rclo3_clo', PR.
-  apply rclo3_base.
+  intros. apply gpaco3_rclo. eapply rclo3_clo_base, PR.
 Qed.
 
 Lemma gpaco3_gen_rclo clo r rg:
@@ -398,7 +404,7 @@ Proof.
       * eapply COM. eapply COM. apply IN. apply H.
       * intros. eapply gpaco3_gupaco. apply gf_mon.
         eapply gupaco3_mon_gen; intros; [apply PR|apply gf_mon|apply PR0| |apply PR0].
-        eapply rclo3_clo'. apply rclo3_base. apply PR0.
+        apply rclo3_clo_base, PR0.
 Qed.
 
 Lemma compat3_wcompat clo
@@ -638,6 +644,213 @@ Qed.
 
 End Companion.
 
+Section Respectful.
+
+Variable gf: rel -> rel.
+Hypothesis gf_mon: monotone3 gf.
+
+Structure wrespectful3 (clo: rel -> rel) : Prop :=
+  wrespect3_intro {
+      wrespect3_mon: monotone3 clo;
+      wrespect3_respect :
+        forall l r
+               (LE: l <3= r)
+               (GF: l <3= gf r),
+        clo l <3= gf (rclo3 clo r);
+    }.
+
+Structure prespectful3 (clo: rel -> rel) : Prop :=
+  prespect3_intro {
+      prespect3_mon: monotone3 clo;
+      prespect3_respect :
+        forall l r
+               (LE: l <3= r)
+               (GF: l <3= gf r),
+        clo l <3= paco3 gf (r \3/ clo r);
+    }.
+
+Structure grespectful3 (clo: rel -> rel) : Prop :=
+  grespect3_intro {
+      grespect3_mon: monotone3 clo;
+      grespect3_respect :
+        forall l r
+               (LE: l <3= r)
+               (GF: l <3= gf r),
+        clo l <3= rclo3 (cpn3 gf) (gf (rclo3 (clo \4/ gupaco3 gf (cpn3 gf)) r));
+    }.
+
+Definition gf'3 := id /4\ gf.
+
+Definition compatible'3 := compatible3 gf'3.
+
+Lemma wrespect3_compatible'
+      clo (RES: wrespectful3 clo):
+  compatible'3 (rclo3 clo).
+Proof.
+  intros. econstructor. apply rclo3_mon.
+  intros. destruct RES. split.
+  { eapply rclo3_mon. apply PR. intros. apply PR0. }
+  induction PR; intros.
+  - eapply gf_mon. apply IN.
+    intros. apply rclo3_base, PR.
+  - eapply gf_mon.
+    + eapply wrespect3_respect0; [|apply H|apply IN].
+      intros. eapply rclo3_mon; intros; [apply LE, PR|apply PR0].
+    + intros. apply rclo3_rclo, PR.
+Qed.
+
+Lemma prespect3_compatible'
+      clo (RES: prespectful3 clo):
+  compatible'3 (fun r => upaco3 gf (r \3/ clo r)).
+Proof.
+  econstructor.
+  { red; intros. eapply upaco3_mon. apply IN.
+    intros. destruct PR.
+    - left. apply LE, H.
+    - right. eapply RES. apply H. intros. apply LE, PR. }
+
+  intros r.
+  assert (LEM: (gf'3 r \3/ clo (gf'3 r)) <3= (r \3/ clo r)).
+  { intros. destruct PR.
+    - left. apply H.
+    - right. eapply RES. apply H. intros. apply PR.
+  }
+
+  intros. destruct PR.
+  - split.
+    + left. eapply paco3_mon. apply H. apply LEM.
+    + apply paco3_unfold; [apply gf_mon|].
+      eapply paco3_mon. apply H. apply LEM.
+  - split.
+    + right. apply LEM. apply H.
+    + destruct H.
+      * eapply gf_mon. apply H. intros. right. left. apply PR.
+      * apply paco3_unfold; [apply gf_mon|].
+        eapply RES, H; intros; apply PR.
+Qed.
+
+Lemma grespect3_compatible'
+      clo (RES: grespectful3 clo):
+  compatible'3 (rclo3 (clo \4/ cpn3 gf)).
+Proof.
+  apply wrespect3_compatible'.
+  econstructor.
+  { red; intros. destruct IN.
+    - left. eapply RES; [apply H|]. apply LE.
+    - right. eapply cpn3_mon; [apply H|]. apply LE. }
+  intros. destruct PR.
+  - eapply RES.(grespect3_respect) in H; [|apply LE|apply GF].
+    apply (@compat3_compat gf (rclo3 (cpn3 gf))) in H.
+    2: { apply rclo3_compat; [apply gf_mon|]. apply cpn3_compat. apply gf_mon. }
+    eapply gf_mon; [apply H|].
+    intros. apply rclo3_clo. right.
+    exists (rclo3 (cpn3 gf)).
+    { apply rclo3_compat; [apply gf_mon|]. apply cpn3_compat. apply gf_mon. }
+    eapply rclo3_mon; [eapply PR|].
+    intros. eapply rclo3_mon_gen; [eapply PR0|..].
+    + intros. destruct PR1.
+      * left. apply H0.
+      * right. apply cpn3_gupaco; [apply gf_mon|apply H0].
+    + intros. apply PR1.
+  - eapply gf_mon.
+    + apply (@compat3_compat gf (rclo3 (cpn3 gf))).
+      { apply rclo3_compat; [apply gf_mon|]. apply cpn3_compat. apply gf_mon. }
+      eapply rclo3_clo_base. eapply cpn3_mon; [apply H|apply GF].
+    + intros. eapply rclo3_mon_gen; [eapply PR|..].
+      * intros. right. apply PR0.
+      * intros. apply PR0.
+Qed.
+
+Lemma compat3_compatible'
+      clo (COM: compatible3 gf clo):
+  compatible'3 clo.
+Proof.
+  destruct COM. econstructor; [apply compat3_mon0|].
+  intros. split.
+  - eapply compat3_mon0; intros; [apply PR| apply PR0].
+  - apply compat3_compat0.
+    eapply compat3_mon0; intros; [apply PR| apply PR0].
+Qed.
+
+Lemma compatible'3_companion
+      clo (RES: compatible'3 clo):
+  clo <4= cpn3 gf.
+Proof.
+  assert (MON: monotone3 gf'3).
+  { econstructor. apply LE, IN.
+    eapply gf_mon, LE. apply IN.
+  }
+  assert (CPN: clo <4= cpn3 gf'3).
+  { intros. econstructor. apply RES. apply PR.
+  }
+  intros. apply CPN in PR.
+  econstructor; [|apply PR].
+  econstructor; [apply cpn3_mon|]; intros.
+  assert (PR1: cpn3 gf'3 (gf r) <3= cpn3 gf'3 (gf'3 (cpn3 gf r))).
+  { intros. eapply cpn3_mon. apply PR1.
+    intros. assert (TMP: gf (cpn3 gf r) <3= (cpn3 gf r /3\ gf (cpn3 gf r))).
+    { split; [apply cpn3_step; [apply gf_mon|]|]; assumption. }
+    apply TMP.
+    eapply gf_mon. apply PR2. intros. apply cpn3_base; assumption.
+  }
+  apply PR1 in PR0. clear PR1. 
+  eapply compat3_compat with (gf:=gf'3) in PR0; [|apply cpn3_compat, MON].
+  eapply gf_mon; [apply PR0|].
+  intros. eapply cpn3_cpn; [apply MON|].
+  eapply cpn3_mon; [apply PR1|].
+  intros. econstructor; [|apply PR2].
+  apply compat3_compatible', cpn3_compat, gf_mon.
+Qed.
+
+Lemma wrespect3_companion
+      clo (RES: wrespectful3 clo):
+  clo <4= cpn3 gf.
+Proof.
+  intros. eapply wrespect3_compatible' in RES.
+  eapply (@compatible'3_companion (rclo3 clo)) in RES; [apply RES|].
+  eapply rclo3_clo_base, PR.
+Qed.
+
+Lemma prespect3_companion
+      clo (RES: prespectful3 clo):
+  clo <4= cpn3 gf.
+Proof.
+  intros. eapply compatible'3_companion. apply prespect3_compatible'. apply RES.
+  right. right. apply PR.
+Qed.
+
+Lemma grespect3_companion
+      clo (RES: grespectful3 clo):
+  clo <4= cpn3 gf.
+Proof.
+  intros. eapply grespect3_compatible' in RES.
+  eapply (@compatible'3_companion (rclo3 (clo \4/ cpn3 gf))); [apply RES|].
+  apply rclo3_clo_base. left. apply PR.
+Qed.
+
+Lemma wrespect3_uclo
+      clo (RES: wrespectful3 clo):
+  clo <4= gupaco3 gf (cpn3 gf).
+Proof.
+  intros. eapply gpaco3_clo, wrespect3_companion, PR. apply RES.
+Qed.
+
+Lemma prespect3_uclo
+      clo (RES: prespectful3 clo):
+  clo <4= gupaco3 gf (cpn3 gf).
+Proof.
+  intros. eapply gpaco3_clo, prespect3_companion, PR. apply RES.
+Qed.
+
+Lemma grespect3_uclo
+      clo (RES: grespectful3 clo):
+  clo <4= gupaco3 gf (cpn3 gf).
+Proof.
+  intros. eapply gpaco3_clo, grespect3_companion, PR. apply RES.
+Qed.
+
+End Respectful.
+
 End GeneralizedPaco3.
 
 Hint Resolve gpaco3_def_mon : paco.
@@ -647,3 +860,5 @@ Hint Resolve gpaco3_step : paco.
 Hint Resolve gpaco3_final : paco.
 Hint Resolve rclo3_base : paco.
 Hint Constructors gpaco3 : paco.
+Hint Resolve wrespect3_uclo : paco.
+Hint Resolve prespect3_uclo : paco.
