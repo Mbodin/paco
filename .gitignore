@@ -1,8 +1,3 @@
-Makefile.coq
-Makefile.coq.conf
-_CoqProject
-.coqdeps.d
-
 *.aux
 *.vo
 *.vos
@@ -17,3 +12,4 @@ _CoqProject
 _esy/
 node_modules/
 
+html/
